@@ -138,6 +138,8 @@ class ContainerProxy():
 
         # Set transition callback
         container.register_transition_cb(self._transition_cb)
+        container.register_start_cb(self._start_cb)
+        container.register_termination_cb(self._termination_cb)
 
         # Create thread to constantly publish
         self._status_pub_thread = threading.Thread(name=server_name+':status_publisher',target=self._status_pub_loop)
@@ -205,7 +207,7 @@ class ContainerProxy():
             if not rospy.is_shutdown():
                 rospy.logerr("Publishing SMACH introspection structure message failed.")
 
-    def _publish_status(self, info_str=''):
+    def _publish_status(self, info_str='', active_state=None):
         """Publish current state of this container."""
         # Construct messages
         with self._status_pub_lock:
@@ -214,7 +216,16 @@ class ContainerProxy():
             #print str(structure_msg)
             # Construct status message
             #print self._container.get_active_states()
-            state_msg = SmachContainerStatus(
+            if active_state:
+                state_msg = SmachContainerStatus(
+                    Header(stamp = rospy.Time.now()),
+                    path,
+                    self._container.get_initial_states(),
+                    [active_state],
+                    pickle.dumps(self._container.userdata._data,2),
+                    info_str)
+            else:
+                state_msg = SmachContainerStatus(
                     Header(stamp = rospy.Time.now()),
                     path,
                     self._container.get_initial_states(),
@@ -233,6 +244,24 @@ class ContainerProxy():
         info_str = (str(args) + ', ' + str(kwargs))
         rospy.logdebug("Transitioning: "+info_str)
         self._publish_status(info_str)
+    ### Start reporting
+    def _start_cb(self, *args, **kwargs):
+        """Start callback, passed to all internal nodes in the tree.
+        This callback locks an internal mutex, preventing any hooked transitions
+        from occurring while we're walking the tree.
+        """
+        info_str = (str(args) + ', ' + str(kwargs))
+        rospy.logdebug("Starting: "+info_str)
+        self._publish_status(info_str)
+    ### Terminate reporting
+    def _termination_cb(self, *args, **kwargs):
+        """Tarminate callback, passed to all internal nodes in the tree.
+        This callback locks an internal mutex, preventing any hooked transitions
+        from occurring while we're walking the tree.
+        """
+        info_str = (str(args) + ', ' + str(kwargs))
+        rospy.logdebug("Tarminating: "+info_str)
+        self._publish_status(info_str, args[2])
 
     def _init_cmd_cb(self, msg):
         """Initialize a tree's state and userdata."""

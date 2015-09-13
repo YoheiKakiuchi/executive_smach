@@ -372,6 +372,9 @@ class StateMachine(smach.container.Container):
         
         This will attempt to preempt the currently active state.
         """
+        print(self._current_state)
+        print(self._preempted_state)
+
         with self._state_transitioning_lock:
             # Aleways Set this container's preempted flag
             self._preempt_requested = True

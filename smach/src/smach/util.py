@@ -21,11 +21,13 @@ def has_smach_interface(obj):
 # Callback decorator for describing userdata
 class cb_interface(object):
     def __init__(self, outcomes=[], input_keys=[], output_keys=[]):
+        print('__init__')
         self._outcomes = outcomes
         self._input_keys = input_keys
         self._output_keys = output_keys
     
     def __call__(self, cb):
+        print('__call__')
         return CBInterface(cb, self._outcomes, self._input_keys, self._output_keys)
 class CBInterface(object):
     """Decorator to describe the extension of a state's SMACH userdata and outcome interface.
@@ -84,6 +86,7 @@ class CBInterface(object):
         self._cb = cb
 
     def __call__(self, *args, **kwargs):
+        print('CB__call__')
         return self._cb(*args, **kwargs)
 
     ### SMACH Interface API
